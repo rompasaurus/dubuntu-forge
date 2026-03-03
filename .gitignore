@@ -1,0 +1,9 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets — never commit these
+*.pem
+*.key
+id_*
+authorized_keys

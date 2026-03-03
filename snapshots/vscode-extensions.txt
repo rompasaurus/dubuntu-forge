@@ -1,0 +1,14 @@
+alefragnani.project-manager
+anthropic.claude-code
+dbaeumer.vscode-eslint
+eamodio.gitlens
+esbenp.prettier-vscode
+kilocode.kilo-code
+ms-dotnettools.csdevkit
+ms-dotnettools.csharp
+ms-dotnettools.vscode-dotnet-runtime
+ms-playwright.playwright
+ms-python.debugpy
+ms-python.python
+ms-python.vscode-pylance
+ms-python.vscode-python-envs
