@@ -17,14 +17,14 @@ cat >> ~/.zshrc << 'ZSHBLOCK'
 
 # ─── dubuntu-forge CLI tools ─────────────────────────────────────────────
 
-# ─── Tool Initialization ─────────────────────────────────────────────────
-eval "$(zoxide init zsh)"           # Smarter cd
-eval "$(fzf --zsh)"                 # Fuzzy finder integration
-eval "$(starship init zsh)"         # Cross-shell prompt
-eval "$(direnv hook zsh)"           # Per-directory environments
-eval "$(mise activate zsh)"         # Version manager
-eval "$(thefuck --alias)"           # Auto-correct commands
-eval "$(atuin init zsh)"            # Shell history
+# ─── Tool Initialization (silently skips missing tools) ──────────────────
+command -v zoxide   &>/dev/null && eval "$(zoxide init zsh)"
+command -v fzf      &>/dev/null && eval "$(fzf --zsh)"
+command -v starship &>/dev/null && eval "$(starship init zsh)"
+command -v direnv   &>/dev/null && eval "$(direnv hook zsh)"
+command -v mise     &>/dev/null && eval "$(mise activate zsh)"
+command -v thefuck  &>/dev/null && eval "$(thefuck --alias)"
+command -v atuin    &>/dev/null && eval "$(atuin init zsh)"
 
 # ─── fzf + fd + bat Integration ──────────────────────────────────────────
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow'
