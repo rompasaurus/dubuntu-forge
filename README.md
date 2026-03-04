@@ -89,6 +89,14 @@ git add -A && git commit -m "Update snapshot"
 | **Notes**    | Obsidian                                                        |
 | **Terminal** | Ghostty                                                         |
 
+## Docs
+
+| Guide | Description |
+|-------|-------------|
+| [CLI Power Tools User Guide](CLI-UserGuide.md) | Comprehensive reference for 100+ CLI/TUI tools |
+| [CLI Deep-Dive Reference](docs/cli-powertools-reference.md) | Networking, security, and text processing tools |
+| [Ubuntu Quick Tips](docs/ubuntu-quick-tips.md) | Keyboard shortcuts, GNOME tweaks, multi-monitor tips, and quick fixes |
+
 ## Notes
 
 - Monitor config (`configs/monitors.xml`) is saved but not auto-deployed since it's hardware-specific.
