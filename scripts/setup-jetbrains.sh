@@ -20,10 +20,11 @@ tar -xzf /tmp/jetbrains-toolbox.tar.gz -C /tmp
 
 # Move to /opt
 TOOLBOX_DIR=$(find /tmp -maxdepth 1 -name "jetbrains-toolbox-*" -type d | head -1)
-sudo mv "$TOOLBOX_DIR/jetbrains-toolbox" /opt/jetbrains-toolbox
+sudo rm -rf /opt/jetbrains-toolbox
+sudo mv "$TOOLBOX_DIR" /opt/jetbrains-toolbox
 
 # Cleanup
-rm -rf /tmp/jetbrains-toolbox*
+rm -f /tmp/jetbrains-toolbox.tar.gz
 
 # Create desktop launcher
 mkdir -p ~/.local/share/applications
@@ -31,7 +32,7 @@ cat > ~/.local/share/applications/jetbrains-toolbox.desktop << EOF
 [Desktop Entry]
 Name=JetBrains Toolbox
 Comment=Manage JetBrains IDEs
-Exec=/opt/jetbrains-toolbox
+Exec=/opt/jetbrains-toolbox/bin/jetbrains-toolbox
 Icon=jetbrains-toolbox
 Terminal=false
 Type=Application
@@ -45,7 +46,7 @@ update-desktop-database ~/.local/share/applications/ 2>/dev/null || true
 # Launch Toolbox
 echo ""
 echo "=== Launching JetBrains Toolbox ==="
-/opt/jetbrains-toolbox &
+/opt/jetbrains-toolbox/bin/jetbrains-toolbox &
 
 echo ""
 echo "=== Done! ==="
