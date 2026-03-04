@@ -47,6 +47,26 @@ cd dubuntu-forge
 ./scripts/deploy.sh --claude     # Install Claude Code CLI
 ```
 
+## Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `deploy.sh` | Restore the full dubuntu-desktop environment (packages, configs, GNOME settings, services) | `./scripts/deploy.sh` or `./scripts/deploy.sh --apt --configs` |
+| `snapshot.sh` | Capture current system state (APT, snaps, flatpaks, dconf, configs) | `./scripts/snapshot.sh` |
+| `install-cli-tools.sh` | Install the full suite of 100+ CLI/TUI power tools from the User Guide | `bash scripts/install-cli-tools.sh` |
+| `install-essentials.sh` | Install only the essential CLI tools needed for the zshrc integration block | `bash scripts/install-essentials.sh` |
+| `setup-zshrc.sh` | Append CLI tool integrations (zoxide, fzf, eza, bat, etc.) to `~/.zshrc` | `bash scripts/setup-zshrc.sh` |
+| `setup-cac.sh` | Setup CAC smart card auth for Chrome — installs middleware, PKCS#11 module, and DoD root certs | `bash scripts/setup-cac.sh` |
+
+### Recommended order for a fresh machine
+
+```bash
+./scripts/deploy.sh            # 1. Restore full environment
+bash scripts/install-essentials.sh  # 2. Install essential CLI tools
+bash scripts/setup-zshrc.sh         # 3. Wire up shell integrations
+bash scripts/setup-cac.sh           # 4. (Optional) Enable CAC/smart card login
+```
+
 ## Update Snapshot
 
 After installing new software or changing settings:
