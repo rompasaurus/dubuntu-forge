@@ -79,16 +79,6 @@ else
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
-# ─── atuin (shell history) ───────────────────────────────────────────────────
-
-if command -v atuin &>/dev/null; then
-    log "atuin already installed"
-else
-    info "Installing atuin..."
-    curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
-    export PATH="$HOME/.atuin/bin:$PATH"
-fi
-
 # ─── thefuck (command corrector) ─────────────────────────────────────────────
 
 if command -v thefuck &>/dev/null; then
@@ -150,18 +140,11 @@ else
     fi
 fi
 
-# ─── Import shell history into atuin ─────────────────────────────────────────
-
-if command -v atuin &>/dev/null; then
-    info "Importing shell history into atuin..."
-    atuin import auto 2>/dev/null || true
-fi
-
 # ─── Verify ──────────────────────────────────────────────────────────────────
 
 echo ""
 info "Verification:"
-for cmd in zoxide fzf starship direnv mise thefuck atuin bat eza fd dust duf rg tre btop doggo lazygit lazydocker; do
+for cmd in zoxide fzf starship direnv mise thefuck bat eza fd dust duf rg tre btop doggo lazygit lazydocker; do
     if command -v "$cmd" &>/dev/null; then
         echo -e "  ${GREEN}✓${NC} $cmd"
     else

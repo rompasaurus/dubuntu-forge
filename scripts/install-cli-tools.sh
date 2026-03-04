@@ -129,9 +129,6 @@ fi
 info "Installing starship prompt..."
 curl -sS https://starship.rs/install.sh | sh -s -- -y 2>/dev/null || warn "Starship install failed"
 
-info "Installing atuin shell history..."
-curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh 2>/dev/null || warn "Atuin install failed"
-
 info "Updating tldr pages..."
 tldr --update 2>/dev/null || true
 
@@ -144,6 +141,5 @@ info "Next steps:"
 info "  1. Add the shell integration block to your ~/.bashrc"
 info "     (see CLI-UserGuide.md section 15)"
 info "  2. Restart your shell: exec bash"
-info "  3. Run 'atuin import auto' to import shell history"
-info "  4. Run 'broot --install' if not done automatically"
+info "  3. Run 'broot --install' if not done automatically"
 echo ""
