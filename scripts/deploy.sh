@@ -84,12 +84,12 @@ VSCODE
         info "Tailscale repo already configured"
     fi
 
-    # GitHub Desktop (shiftkey)
-    if [ ! -f /etc/apt/sources.list.d/shiftkey-packages.list ]; then
-        info "Adding GitHub Desktop (shiftkey) repository..."
-        wget -qO- https://apt.packages.shiftkey.dev/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/shiftkey-packages.gpg
-        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/shiftkey-packages.gpg] https://apt.packages.shiftkey.dev/ubuntu/ any main" | \
-            sudo tee /etc/apt/sources.list.d/shiftkey-packages.list > /dev/null
+    # GitHub Desktop (shiftkey via mwt mirror — official domain has SSL issues)
+    if [ ! -f /etc/apt/sources.list.d/mwt-desktop.list ]; then
+        info "Adding GitHub Desktop (shiftkey/mwt mirror) repository..."
+        curl -fsSL https://mirror.mwt.me/shiftkey-desktop/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/mwt-desktop.gpg
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/mwt-desktop.gpg] https://mirror.mwt.me/shiftkey-desktop/deb/ any main" | \
+            sudo tee /etc/apt/sources.list.d/mwt-desktop.list > /dev/null
     else
         info "GitHub Desktop repo already configured"
     fi
@@ -122,7 +122,7 @@ install_apt() {
         npm
         openssh-server
         python3-evdev
-        steam-launcher
+        steam-installer
         tailscale
         ubuntu-desktop
         ubuntu-restricted-addons
