@@ -163,12 +163,28 @@ install_snaps() {
         fi
     done
 
+    # Fix Spotify blue title bar on GNOME Wayland
+    if snap list spotify &>/dev/null; then
+        info "Applying Spotify blue title bar fix (force XWayland)..."
+        mkdir -p ~/.local/share/icons ~/.local/share/applications
+        printf '[Desktop Entry]\nX-SnapInstanceName=spotify\nType=Application\nName=Spotify\nGenericName=Music Player\nIcon=/home/%s/.local/share/icons/spotify.png\nExec=env XDG_SESSION_TYPE=x11 GDK_BACKEND=x11 /snap/bin/spotify %%U\nTerminal=false\nMimeType=x-scheme-handler/spotify;\nCategories=Audio;Music;Player;AudioVideo;\nStartupWMClass=Spotify\n' "$USER" > ~/.local/share/applications/spotify_spotify.desktop
+        curl -sL "https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_Green.png" \
+            -o ~/.local/share/icons/spotify.png
+        update-desktop-database ~/.local/share/applications/
+        log "Spotify title bar fix applied."
+    fi
+
     log "Snap packages installed."
 }
 
 # ─── Flatpak Apps ────────────────────────────────────────────────────────────
 
 install_flatpaks() {
+    if ! command -v flatpak &>/dev/null; then
+        info "Installing flatpak..."
+        sudo apt install -y flatpak
+    fi
+
     log "Installing Flatpak apps..."
 
     # Ensure Flathub is added
