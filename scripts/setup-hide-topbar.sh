@@ -35,7 +35,7 @@ log "gext available."
 
 # ─── Install extensions ───────────────────────────────────────────────────────
 
-HIDE_TOP_BAR="hidetopbar@mathieu.biber.org"
+HIDE_TOP_BAR="hidetopbar@mathieu.bidon.ca"
 UNITE="unite@hardpixel.eu"
 
 for ext in "$HIDE_TOP_BAR" "$UNITE"; do
