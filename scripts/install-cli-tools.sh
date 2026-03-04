@@ -38,7 +38,9 @@ sudo apt update && sudo apt install -y \
     nvtop iotop iftop nethogs bmon vnstat \
     fastfetch inxi tealdeer glow \
     powertop lynis aria2 \
-    pipx
+    pipx make gcc pkg-config \
+    libfontconfig1-dev libharfbuzz-dev libgraphite2-dev \
+    libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
 log "APT packages installed."
 
 # ─── Symlinks (Ubuntu renames some tools) ────────────────────────────────────

@@ -25,6 +25,7 @@ echo -e "${NC}"
 info "Installing APT packages (will prompt for sudo password)..."
 sudo apt update
 sudo apt install -y \
+    curl \
     zoxide bat eza fd-find ripgrep fzf direnv btop duf trash-cli \
     zsh pipx
 
@@ -85,6 +86,7 @@ if command -v atuin &>/dev/null; then
 else
     info "Installing atuin..."
     curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+    export PATH="$HOME/.atuin/bin:$PATH"
 fi
 
 # ─── thefuck (command corrector) ─────────────────────────────────────────────
@@ -97,7 +99,15 @@ else
     pipx install thefuck
 fi
 
-# ─── Cargo tools (dust, tre, doggo) ─────────────────────────────────────────
+# ─── Rust (needed for cargo tools) ────────────────────────────────────────────
+
+if ! command -v cargo &>/dev/null; then
+    info "Installing Rust..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    source "$HOME/.cargo/env"
+fi
+
+# ─── Cargo tools (dust, tre) ─────────────────────────────────────────────────
 
 if command -v cargo &>/dev/null; then
     info "Installing cargo tools (dust, tre)..."
@@ -105,8 +115,16 @@ if command -v cargo &>/dev/null; then
     log "Cargo tools installed."
 else
     warn "Rust/cargo not found — skipping dust and tre."
-    warn "Install Rust: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
 fi
+
+# ─── Go (needed for Go tools) ────────────────────────────────────────────────
+
+if ! command -v go &>/dev/null; then
+    info "Installing Go via snap..."
+    sudo snap install go --classic
+fi
+
+export PATH="$HOME/go/bin:$PATH"
 
 # ─── Go tools (doggo, lazydocker) ────────────────────────────────────────────
 
@@ -117,7 +135,19 @@ if command -v go &>/dev/null; then
     log "Go tools installed."
 else
     warn "Go not found — skipping doggo and lazydocker."
-    warn "Install Go: sudo snap install go --classic"
+fi
+
+# ─── lazygit ──────────────────────────────────────────────────────────────────
+
+if command -v lazygit &>/dev/null; then
+    log "lazygit already installed"
+else
+    info "Installing lazygit..."
+    if command -v go &>/dev/null; then
+        go install github.com/jesseduffield/lazygit@latest 2>/dev/null || warn "lazygit install failed"
+    else
+        warn "Go not found — skipping lazygit."
+    fi
 fi
 
 # ─── Import shell history into atuin ─────────────────────────────────────────
