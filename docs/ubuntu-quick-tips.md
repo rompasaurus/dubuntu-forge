@@ -28,6 +28,19 @@ Handy shortcuts, tweaks, and quality-of-life improvements for Ubuntu/GNOME.
 | `Shift + Print Screen` | Screenshot selection |
 | `Super + V` | Clipboard history (GNOME 45+) |
 
+## Ghostty Keybindings
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + Shift + T` | New tab |
+| `Ctrl + Tab` | Next tab |
+| `Ctrl + Shift + Tab` | Previous tab |
+| `Ctrl + 1-9` | Go to specific tab (custom keybind) |
+| `Ctrl + Shift + W` | Close tab |
+| `Ctrl + Shift + ,` | Reload config |
+
+> **Note:** `Ctrl+1-9` tab switching is not a Ghostty default on Linux — it requires custom keybinds in `~/.config/ghostty/config`. See `configs/ghostty.conf` in this repo.
+
 ## Window Management
 
 ### Tile windows side by side

@@ -30,6 +30,26 @@ sudo apt install -y \
 
 log "APT packages installed."
 
+# ─── Oh My Zsh + plugins ──────────────────────────────────────────────────────
+
+if [ -d "$HOME/.oh-my-zsh" ]; then
+    log "Oh My Zsh already installed"
+else
+    info "Installing Oh My Zsh..."
+    RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    log "Oh My Zsh installed."
+fi
+
+ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+
+if [ -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
+    log "zsh-autosuggestions plugin already installed"
+else
+    info "Installing zsh-autosuggestions plugin..."
+    git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+    log "zsh-autosuggestions installed."
+fi
+
 # ─── Ubuntu compatibility symlinks ───────────────────────────────────────────
 
 info "Creating symlinks (bat -> batcat, fd -> fdfind)..."

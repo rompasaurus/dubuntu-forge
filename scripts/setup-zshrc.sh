@@ -1,59 +1,96 @@
 #!/usr/bin/env bash
 #
-# Appends CLI tool integrations to ~/.zshrc
-# Safe to run multiple times — checks for existing block before appending.
+# Full Zsh environment setup: Oh My Zsh, plugins, and zshrc config.
+# Safe to run multiple times — checks for existing installs before acting.
+#
+# Usage: bash scripts/setup-zshrc.sh
 #
 set -euo pipefail
 
-MARKER="# ─── dubuntu-forge CLI tools ─────────────────────────────────────────────"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+CONFIGS="$PROJECT_DIR/configs"
 
-if grep -qF "$MARKER" ~/.zshrc 2>/dev/null; then
-    echo "[!] Block already exists in ~/.zshrc — skipping."
-    echo "    To re-apply, remove the dubuntu-forge block from ~/.zshrc first."
-    exit 0
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+log()  { echo -e "${GREEN}[+]${NC} $*"; }
+info() { echo -e "${CYAN}[*]${NC} $*"; }
+warn() { echo -e "${YELLOW}[!]${NC} $*"; }
+err()  { echo -e "${RED}[x]${NC} $*"; }
+
+echo -e "${CYAN}"
+echo "  ┌──────────────────────────────────────────┐"
+echo "  │        Zsh Environment Setup              │"
+echo "  │   Oh My Zsh + Plugins + Config Deploy     │"
+echo "  └──────────────────────────────────────────┘"
+echo -e "${NC}"
+
+# ─── Ensure zsh is installed ──────────────────────────────────────────────────
+
+if ! command -v zsh &>/dev/null; then
+    info "Installing zsh..."
+    sudo apt update && sudo apt install -y zsh
+    log "zsh installed."
+else
+    log "zsh already installed"
 fi
 
-cat >> ~/.zshrc << 'ZSHBLOCK'
+# ─── Install Oh My Zsh ───────────────────────────────────────────────────────
 
-# ─── dubuntu-forge CLI tools ─────────────────────────────────────────────
+if [ -d "$HOME/.oh-my-zsh" ]; then
+    log "Oh My Zsh already installed"
+else
+    info "Installing Oh My Zsh..."
+    RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    log "Oh My Zsh installed."
+fi
 
-# ─── Tool Initialization (silently skips missing tools) ──────────────────
-command -v zoxide   &>/dev/null && eval "$(zoxide init zsh)"
-command -v fzf      &>/dev/null && eval "$(fzf --zsh)"
-command -v starship &>/dev/null && eval "$(starship init zsh)"
-command -v direnv   &>/dev/null && eval "$(direnv hook zsh)"
-command -v mise     &>/dev/null && eval "$(mise activate zsh)"
-command -v thefuck  &>/dev/null && eval "$(thefuck --alias)"
-command -v atuin    &>/dev/null && eval "$(atuin init zsh)"
+# ─── Install zsh-autosuggestions plugin ───────────────────────────────────────
 
-# ─── fzf + fd + bat Integration ──────────────────────────────────────────
-export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow'
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-export FZF_ALT_C_COMMAND='fd --type d --hidden --follow'
-export FZF_CTRL_T_OPTS="--preview 'bat --color=always --line-range :200 {}'"
-export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --icons {}'"
+ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
-# ─── bat Configuration ───────────────────────────────────────────────────
-export BAT_THEME="Catppuccin Mocha"
-export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+if [ -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
+    log "zsh-autosuggestions plugin already installed"
+else
+    info "Installing zsh-autosuggestions plugin..."
+    git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+    log "zsh-autosuggestions installed."
+fi
 
-# ─── Modern Aliases ──────────────────────────────────────────────────────
-alias ls='eza --icons'
-alias ll='eza -lah --icons --group-directories-first'
-alias lt='eza --tree --level=2 --icons'
-alias cat='bat --paging=never'
-alias du='dust'
-alias df='duf'
-alias find='fd'
-alias grep='rg'
-alias tree='tre -e'
-alias top='btop'
-alias dig='doggo'
-alias lg='lazygit'
-alias ld='lazydocker'
+# ─── Deploy zshrc config ─────────────────────────────────────────────────────
 
-# ─── end dubuntu-forge CLI tools ─────────────────────────────────────────
-ZSHBLOCK
+if [ -f "$CONFIGS/zshrc" ]; then
+    if [ -f "$HOME/.zshrc" ]; then
+        cp "$HOME/.zshrc" "$HOME/.zshrc.bak"
+        info "Backed up existing .zshrc to .zshrc.bak"
+    fi
+    cp "$CONFIGS/zshrc" "$HOME/.zshrc"
+    log "Deployed .zshrc from forge configs"
+else
+    err "configs/zshrc not found in forge repo!"
+    exit 1
+fi
 
-echo "[+] CLI tool block appended to ~/.zshrc"
-echo "[*] Run: exec zsh   (to reload)"
+# ─── Set zsh as default shell ─────────────────────────────────────────────────
+
+CURRENT_SHELL="$(getent passwd "$USER" | cut -d: -f7)"
+ZSH_PATH="$(which zsh)"
+
+if [ "$CURRENT_SHELL" = "$ZSH_PATH" ]; then
+    log "zsh is already the default shell"
+else
+    info "Setting zsh as default shell..."
+    chsh -s "$ZSH_PATH"
+    log "Default shell changed to zsh"
+fi
+
+# ─── Done ─────────────────────────────────────────────────────────────────────
+
+echo ""
+log "Zsh environment setup complete!"
+info "  Run: exec zsh   (to reload)"
+echo ""

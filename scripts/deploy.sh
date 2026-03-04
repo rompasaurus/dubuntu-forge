@@ -5,7 +5,7 @@
 #
 # Usage:
 #   chmod +x scripts/deploy.sh
-#   ./scripts/deploy.sh [--all | --apt | --repos | --snaps | --flatpaks | --vscode | --gnome | --configs | --services]
+#   ./scripts/deploy.sh [--all | --apt | --repos | --snaps | --flatpaks | --vscode | --gnome | --configs | --services | --zsh | --smb]
 #
 # With no arguments, runs --all.
 
@@ -263,6 +263,15 @@ deploy_configs() {
         info "Deployed .bashrc"
     fi
 
+    # zshrc
+    if [ -f "$CONFIGS/zshrc" ]; then
+        if [ -f "$HOME/.zshrc" ]; then
+            cp "$HOME/.zshrc" "$HOME/.zshrc.bak"
+        fi
+        cp "$CONFIGS/zshrc" ~/.zshrc
+        info "Deployed .zshrc"
+    fi
+
     # profile
     if [ -f "$CONFIGS/profile" ]; then
         cp "$CONFIGS/profile" ~/.profile
@@ -290,6 +299,22 @@ deploy_configs() {
     fi
 
     log "Configs deployed."
+}
+
+# ─── Zsh Setup ──────────────────────────────────────────────────────────────────
+
+setup_zsh() {
+    log "Running full Zsh environment setup..."
+    bash "$SCRIPT_DIR/setup-zshrc.sh"
+    log "Zsh setup complete."
+}
+
+# ─── SMB Shares ──────────────────────────────────────────────────────────────
+
+setup_smb() {
+    log "Running SMB share mount setup..."
+    bash "$SCRIPT_DIR/setup-smb.sh"
+    log "SMB setup complete."
 }
 
 # ─── Services ────────────────────────────────────────────────────────────────
@@ -350,6 +375,7 @@ run_all() {
     deploy_configs
     enable_services
     install_claude_code
+    setup_zsh
 
     echo ""
     log "All done! You may want to:"
@@ -357,6 +383,7 @@ run_all() {
     info "  2. Generate SSH keys: ssh-keygen -t ed25519"
     info "  3. Log out and back in for all settings to take effect"
     info "  4. Review snapshots/dconf-full.ini for any missed GNOME tweaks"
+    info "  5. Run 'exec zsh' to reload the shell"
     echo ""
 }
 
@@ -381,8 +408,10 @@ for arg in "$@"; do
         --configs)   deploy_configs ;;
         --services)  enable_services ;;
         --claude)    install_claude_code ;;
+        --smb)       setup_smb ;;
+        --zsh)       setup_zsh ;;
         --help|-h)
-            echo "Usage: $0 [--all | --repos | --apt | --snaps | --flatpaks | --vscode | --gnome | --configs | --services | --claude]"
+            echo "Usage: $0 [--all | --repos | --apt | --snaps | --flatpaks | --vscode | --gnome | --configs | --services | --claude | --zsh | --smb]"
             echo "  No arguments = --all"
             ;;
         *)

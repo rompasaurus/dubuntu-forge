@@ -47,6 +47,7 @@ echo "[+] GNOME settings captured"
 
 # Configs
 cp ~/.bashrc "$CONFIGS/bashrc" 2>/dev/null
+cp ~/.zshrc "$CONFIGS/zshrc" 2>/dev/null
 cp ~/.profile "$CONFIGS/profile" 2>/dev/null
 cp ~/.config/ghostty/config "$CONFIGS/ghostty.conf" 2>/dev/null
 echo "[+] Config files copied"
