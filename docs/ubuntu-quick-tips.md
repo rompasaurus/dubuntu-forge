@@ -201,6 +201,38 @@ dig google.com
 sudo resolvectl flush-caches
 ```
 
+## App Fixes
+
+### Fix Spotify blue title bar on GNOME Wayland
+
+Spotify (snap) shows an ugly blue title bar on GNOME Wayland because it uses broken client-side decorations. The fix is to force it to run under XWayland and override the snap's default `.desktop` file.
+
+**1. Create the fixed desktop file:**
+```bash
+printf '[Desktop Entry]\nX-SnapInstanceName=spotify\nType=Application\nName=Spotify\nGenericName=Music Player\nIcon=/home/$USER/.local/share/icons/spotify.png\nExec=env XDG_SESSION_TYPE=x11 GDK_BACKEND=x11 /snap/bin/spotify %%U\nTerminal=false\nMimeType=x-scheme-handler/spotify;\nCategories=Audio;Music;Player;AudioVideo;\nStartupWMClass=Spotify\n' > ~/.local/share/applications/spotify_spotify.desktop
+```
+
+**2. Install the Spotify icon** (the snap icon path breaks on dock):
+```bash
+curl -sL "https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_Green.png" \
+  -o ~/.local/share/icons/spotify.png
+```
+
+**3. Refresh the desktop database:**
+```bash
+update-desktop-database ~/.local/share/applications/
+```
+
+**4. Pin Spotify to the dock:**
+```bash
+# Add spotify_spotify.desktop to your favorites (adjust the list to match yours)
+gsettings set org.gnome.shell favorite-apps "$(gsettings get org.gnome.shell favorite-apps | sed "s/]/, 'spotify_spotify.desktop']/")"
+```
+
+**5. Reload GNOME Shell** to pick up icon changes: `Alt+F2` > type `r` > Enter (X11), or log out and back in (Wayland).
+
+> **Why this works:** The local `~/.local/share/applications/spotify_spotify.desktop` overrides the snap's version at `/var/lib/snapd/desktop/applications/spotify_spotify.desktop`. The `XDG_SESSION_TYPE=x11 GDK_BACKEND=x11` env vars force Spotify to run under XWayland, which eliminates the blue title bar. `StartupWMClass=Spotify` ensures GNOME links the running window to the dock icon.
+
 ## Quick Fixes
 
 ### Fix broken packages
