@@ -252,6 +252,10 @@ apply_gnome_settings() {
     gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
     gsettings set org.gnome.desktop.interface font-name 'Sans 10'
 
+    # Dock appearance — solid background (no transparency)
+    gsettings set org.gnome.shell.extensions.dash-to-dock transparency-mode 'FIXED'
+    gsettings set org.gnome.shell.extensions.dash-to-dock background-opacity 1.0
+
     # Dock favorites
     gsettings set org.gnome.shell favorite-apps "['google-chrome.desktop', 'code.desktop', 'firefox_firefox.desktop', 'thunderbird_thunderbird.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Rhythmbox3.desktop', 'libreoffice-writer.desktop', 'snap-store_snap-store.desktop', 'org.gnome.Yelp.desktop', 'org.gnome.Ptyxis.desktop', 'ghostty_ghostty.desktop', 'discord_discord.desktop', 'org.remmina.Remmina.desktop', 'steam.desktop', 'spotify_spotify.desktop', 'com.github.eneshecan.WhatsAppForLinux.desktop']"
 
