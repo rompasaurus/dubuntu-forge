@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <!-- Gradient for background -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0a0a0f"/>
+    </radialGradient>
+
+    <!-- Neon glow filter for title -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Glow for icon -->
+    <filter id="iconGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Rainbow gradient for icon -->
+    <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff0080"/>
+      <stop offset="20%" stop-color="#ff4040"/>
+      <stop offset="40%" stop-color="#ffaa00"/>
+      <stop offset="60%" stop-color="#00ff88"/>
+      <stop offset="80%" stop-color="#00aaff"/>
+      <stop offset="100%" stop-color="#aa00ff"/>
+    </linearGradient>
+
+    <!-- Secondary rainbow for stroke -->
+    <linearGradient id="rainbow2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00ffcc"/>
+      <stop offset="25%" stop-color="#ff00ff"/>
+      <stop offset="50%" stop-color="#ffff00"/>
+      <stop offset="75%" stop-color="#00ff44"/>
+      <stop offset="100%" stop-color="#ff4488"/>
+    </linearGradient>
+
+    <!-- Title gradient -->
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00ffff"/>
+      <stop offset="50%" stop-color="#ff00ff"/>
+      <stop offset="100%" stop-color="#00ffff"/>
+    </linearGradient>
+
+    <!-- Subtitle gradient -->
+    <linearGradient id="subGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff4444"/>
+      <stop offset="50%" stop-color="#ff8800"/>
+      <stop offset="100%" stop-color="#ff4444"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGrad)"/>
+
+  <!-- Subtle grid lines for tech feel -->
+  <g opacity="0.04" stroke="#00ffff">
+    <line x1="0" y1="270" x2="1920" y2="270" stroke-width="1"/>
+    <line x1="0" y1="540" x2="1920" y2="540" stroke-width="1"/>
+    <line x1="0" y1="810" x2="1920" y2="810" stroke-width="1"/>
+    <line x1="480" y1="0" x2="480" y2="1080" stroke-width="1"/>
+    <line x1="960" y1="0" x2="960" y2="1080" stroke-width="1"/>
+    <line x1="1440" y1="0" x2="1440" y2="1080" stroke-width="1"/>
+  </g>
+
+  <!-- ===== DOOKTV TITLE ===== -->
+  <text x="960" y="280" text-anchor="middle"
+        font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-size="140"
+        fill="url(#titleGrad)" filter="url(#neonGlow)"
+        letter-spacing="18">DOOKTV</text>
+
+  <!-- Title underline accent -->
+  <line x1="660" y1="310" x2="1260" y2="310" stroke="url(#rainbow2)" stroke-width="3" opacity="0.8"/>
+
+  <!-- ===== COLORFUL ICON - Exploding star / energy burst ===== -->
+  <g transform="translate(960,540)" filter="url(#iconGlow)">
+    <!-- Outer rotating rays -->
+    <g opacity="0.6">
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#ff0080" transform="rotate(0)"/>
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#ff4400" transform="rotate(30)"/>
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#ffaa00" transform="rotate(60)"/>
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#aaff00" transform="rotate(90)"/>
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#00ff44" transform="rotate(120)"/>
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#00ffaa" transform="rotate(150)"/>
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#00aaff" transform="rotate(180)"/>
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#0044ff" transform="rotate(210)"/>
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#4400ff" transform="rotate(240)"/>
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#aa00ff" transform="rotate(270)"/>
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#ff00aa" transform="rotate(300)"/>
+      <polygon points="0,-120 15,-45 0,-50 -15,-45" fill="#ff0066" transform="rotate(330)"/>
+    </g>
+
+    <!-- Mid ring - diamond shapes -->
+    <g opacity="0.9">
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#ff00ff" transform="rotate(15)"/>
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#ffff00" transform="rotate(45)"/>
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#00ffff" transform="rotate(75)"/>
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#ff6600" transform="rotate(105)"/>
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#66ff00" transform="rotate(135)"/>
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#0066ff" transform="rotate(165)"/>
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#ff0066" transform="rotate(195)"/>
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#00ff66" transform="rotate(225)"/>
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#6600ff" transform="rotate(255)"/>
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#ff3399" transform="rotate(285)"/>
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#33ff99" transform="rotate(315)"/>
+      <polygon points="0,-95 12,-70 0,-75 -12,-70" fill="#9933ff" transform="rotate(345)"/>
+    </g>
+
+    <!-- Outer hexagonal ring -->
+    <polygon points="0,-85 73.6,-42.5 73.6,42.5 0,85 -73.6,42.5 -73.6,-42.5"
+             fill="none" stroke="url(#rainbow)" stroke-width="3" opacity="0.7"/>
+
+    <!-- Inner hexagonal ring -->
+    <polygon points="0,-60 52,-30 52,30 0,60 -52,30 -52,-30"
+             fill="none" stroke="url(#rainbow2)" stroke-width="2.5" opacity="0.8"/>
+
+    <!-- Central circle with gradient -->
+    <circle cx="0" cy="0" r="40" fill="url(#rainbow)" opacity="0.9"/>
+    <circle cx="0" cy="0" r="35" fill="#1a1a2e"/>
+    <circle cx="0" cy="0" r="30" fill="url(#rainbow2)" opacity="0.7"/>
+    <circle cx="0" cy="0" r="24" fill="#1a1a2e"/>
+
+    <!-- Play button triangle in center -->
+    <polygon points="-10,-18 -10,18 20,0" fill="url(#titleGrad)" opacity="0.95"/>
+
+    <!-- Sparkle dots around the icon -->
+    <circle cx="110" cy="-60" r="3" fill="#ff00ff" opacity="0.8"/>
+    <circle cx="-100" cy="70" r="2.5" fill="#00ffff" opacity="0.8"/>
+    <circle cx="80" cy="90" r="2" fill="#ffff00" opacity="0.8"/>
+    <circle cx="-120" cy="-40" r="3.5" fill="#ff4400" opacity="0.7"/>
+    <circle cx="50" cy="-110" r="2" fill="#00ff88" opacity="0.8"/>
+    <circle cx="-60" cy="105" r="2.5" fill="#aa00ff" opacity="0.7"/>
+    <circle cx="130" cy="20" r="2" fill="#ff0080" opacity="0.8"/>
+    <circle cx="-130" cy="-10" r="2" fill="#00aaff" opacity="0.8"/>
+  </g>
+
+  <!-- ===== SUBTITLE ===== -->
+  <text x="960" y="780" text-anchor="middle"
+        font-family="'Impact', 'Arial Black', sans-serif" font-weight="700" font-size="72"
+        fill="url(#subGrad)" filter="url(#neonGlow)"
+        letter-spacing="12">PREPARE YOUR ANUS</text>
+
+  <!-- Subtitle underline -->
+  <line x1="580" y1="800" x2="1340" y2="800" stroke="url(#rainbow)" stroke-width="2" opacity="0.5"/>
+
+  <!-- Loading bar area at bottom -->
+  <rect x="710" y="920" width="500" height="6" rx="3" fill="#222233" opacity="0.6"/>
+  <rect x="710" y="920" width="250" height="6" rx="3" fill="url(#rainbow)" opacity="0.7"/>
+</svg>

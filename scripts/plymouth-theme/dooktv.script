@@ -1,0 +1,63 @@
+/* DookTV Plymouth Boot Splash Script */
+
+/* Set the background to near-black */
+Window.SetBackgroundTopColor(0.04, 0.04, 0.06);
+Window.SetBackgroundBottomColor(0.02, 0.02, 0.04);
+
+/* Load and center the splash image */
+splash = Image("splash.png");
+splash_sprite = Sprite(splash);
+
+/* Scale image to fit screen while maintaining aspect ratio */
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+image_width = splash.GetWidth();
+image_height = splash.GetHeight();
+
+scale_x = screen_width / image_width;
+scale_y = screen_height / image_height;
+
+/* Use the smaller scale to fit entirely on screen */
+if (scale_x < scale_y)
+    scale = scale_x;
+else
+    scale = scale_y;
+
+scaled_width = image_width * scale;
+scaled_height = image_height * scale;
+
+splash_sprite.SetX(screen_width / 2 - scaled_width / 2);
+splash_sprite.SetY(screen_height / 2 - scaled_height / 2);
+splash_sprite.SetImage(splash.Scale(scaled_width, scaled_height));
+
+/* Progress bar */
+bar_bg = Image("progress-bg.png");
+bar_fill = Image("progress-fill.png");
+
+/* Hide password prompt styling (for encrypted disks) */
+fun display_password_callback(prompt, bullets) {
+    global.password_entry;
+    if (!password_entry) {
+        password_entry.image = Image.Text("", 1, 1, 1);
+        password_entry.sprite = Sprite(password_entry.image);
+        password_entry.sprite.SetX(screen_width / 2 - 150);
+        password_entry.sprite.SetY(screen_height - 100);
+    }
+    bullet_string = "";
+    for (i = 0; i < bullets; i++)
+        bullet_string += "*";
+    password_entry.image = Image.Text(bullet_string, 1, 1, 1);
+    password_entry.sprite.SetImage(password_entry.image);
+}
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+
+/* Message display */
+message_sprite = Sprite();
+fun message_callback(text) {
+    global.message_sprite;
+    image = Image.Text(text, 0.6, 0.6, 0.7);
+    message_sprite.SetImage(image);
+    message_sprite.SetX(screen_width / 2 - image.GetWidth() / 2);
+    message_sprite.SetY(screen_height - 50);
+}
+Plymouth.SetMessageFunction(message_callback);

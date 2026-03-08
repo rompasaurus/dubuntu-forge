@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=DookTV
+Description=DookTV custom boot splash - Prepare Your Anus
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/dooktv
+ScriptFile=/usr/share/plymouth/themes/dooktv/dooktv.script
