@@ -55,17 +55,20 @@ if [[ "${1:-}" == "--undo" ]]; then
     fi
 
     # Remove old systemd/udev artifacts (requires sudo)
+    NEED_RELOAD=false
     if systemctl is-enabled fix-hdmi-audio.service &>/dev/null; then
         sudo systemctl disable fix-hdmi-audio.service
         log "Systemd service disabled."
+        NEED_RELOAD=true
     fi
     for f in "$OLD_FIXSCRIPT" "$OLD_SERVICE" "$OLD_UDEV"; do
         if [ -f "$f" ]; then
             sudo rm -f "$f"
             log "Removed $f"
+            NEED_RELOAD=true
         fi
     done
-    if [ -f "$OLD_SERVICE" ] || [ -f "$OLD_UDEV" ]; then
+    if $NEED_RELOAD; then
         sudo systemctl daemon-reload 2>/dev/null || true
         sudo udevadm control --reload-rules 2>/dev/null || true
     fi
@@ -75,6 +78,7 @@ if [[ "${1:-}" == "--undo" ]]; then
 
     echo ""
     log "Undo complete. All HDMI audio fix artifacts removed."
+    info "Run the script again (without --undo) to reinstall."
     exit 0
 fi
 
@@ -178,13 +182,41 @@ systemctl --user restart pipewire pipewire-pulse wireplumber 2>/dev/null || true
 sleep 3
 
 # Find the new sink and set as default
-DENON_SINK=$(wpctl status 2>/dev/null | grep "DENON-AVR" | head -1 | awk '{print $1}' | tr -d '.*')
+DENON_SINK=$(wpctl status 2>/dev/null | grep "DENON-AVR" | head -1 | sed 's/[^0-9]*\([0-9]*\).*/\1/')
 if [ -n "$DENON_SINK" ]; then
     wpctl set-default "$DENON_SINK"
     wpctl set-volume "$DENON_SINK" 1.0
     log "Set DENON-AVR (sink $DENON_SINK) as default audio output."
 else
     warn "Could not find DENON-AVR sink. Set it manually in GNOME Sound settings."
+fi
+
+# ─── Ensure displays are mirrored ────────────────────────────────────────
+#
+# The HDMI audio link only works when the display output is active.
+# Mirror the Denon with the TV so HDMI stays active without extending
+# the desktop. GNOME handles different refresh rates independently,
+# so the TV stays at 120Hz.
+#
+
+info "Configuring mirrored display (keeps HDMI audio link active)..."
+SERIAL=$(gdbus call --session \
+    --dest org.gnome.Mutter.DisplayConfig \
+    --object-path /org/gnome/Mutter/DisplayConfig \
+    --method org.gnome.Mutter.DisplayConfig.GetCurrentState 2>/dev/null \
+    | grep -oP '^\(uint32 \K[0-9]+' || true)
+
+if [ -n "$SERIAL" ]; then
+    gdbus call --session \
+        --dest org.gnome.Mutter.DisplayConfig \
+        --object-path /org/gnome/Mutter/DisplayConfig \
+        --method org.gnome.Mutter.DisplayConfig.ApplyMonitorsConfig \
+        "$SERIAL" 2 \
+        "[(0, 0, 1.5, 0, true, [('DP-2', '3840x2160@120.000', []), ('HDMI-3', '3840x2160@60.000', [])])]" \
+        "[]" 2>/dev/null && log "Displays mirrored (TV 4K@120Hz + Denon 4K@60Hz)." \
+        || warn "Could not set mirror mode. Set it manually in Settings → Displays."
+else
+    warn "Could not read display config. Set mirror mode manually in Settings → Displays."
 fi
 
 # ─── Quick audio test ────────────────────────────────────────────────────
