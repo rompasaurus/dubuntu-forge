@@ -1,87 +1,148 @@
 #!/bin/bash
-# Download a curated collection of 4K wallpapers
-# Categories: cityscapes, nature, sci-fi, gaming (BG3 + FF), weird
+# Download ~200 curated 4K wallpapers from Wallhaven, sorted by category
+# Uses Wallhaven public API (no key needed for SFW)
+# Usage: ./download-wallpapers.sh [destination]
 
 set -e
 
 DEST="${1:-$HOME/Pictures/Wallpapers}"
-mkdir -p "$DEST"/{cityscapes,nature,scifi,gaming,weird}
+WALLHAVEN="https://wallhaven.cc/api/v1/search"
+PER_PAGE=24  # Wallhaven max per page
+TOTAL_TARGET=200
 
-download() {
-    local dir="$1" name="$2" url="$3"
-    if [ -f "$DEST/$dir/$name" ]; then
-        echo "  Skipping $name (already exists)"
-        return
-    fi
-    echo "  Downloading $name..."
-    wget -q --max-redirect=5 --timeout=30 -O "$DEST/$dir/$name" "$url" 2>/dev/null || \
-    curl -sL --max-time 60 -o "$DEST/$dir/$name" "$url" 2>/dev/null || \
-    echo "  FAILED: $name"
+echo "=== 4K Wallpaper Downloader ==="
+echo "Destination: $DEST"
+echo "Target: ~${TOTAL_TARGET} wallpapers"
+echo ""
+
+# Categories and search queries
+# Each entry: "folder|query|pages_to_fetch"
+CATEGORIES=(
+    "nature|nature landscape mountain|2"
+    "nature|ocean underwater reef|1"
+    "nature|aurora borealis northern lights|1"
+    "nature|forest fog moody|1"
+    "space|nebula galaxy deep space|2"
+    "space|earth planet orbit|1"
+    "space|astronaut space station|1"
+    "cyberpunk|cyberpunk neon city|2"
+    "cyberpunk|tokyo neon night|1"
+    "cityscapes|city skyline night|2"
+    "cityscapes|urban architecture modern|1"
+    "abstract|abstract colorful fluid|2"
+    "abstract|geometric minimal dark|1"
+    "abstract|fractal psychedelic|1"
+    "scifi|science fiction futuristic|2"
+    "scifi|mech robot sci-fi|1"
+    "dark|dark moody atmospheric|2"
+    "dark|gothic horror dark|1"
+    "gaming|dark souls elden ring|1"
+    "gaming|baldurs gate 3|1"
+    "gaming|final fantasy|1"
+    "gaming|cyberpunk 2077|1"
+    "gaming|god of war|1"
+    "anime|anime scenery landscape|2"
+    "anime|anime cyberpunk city|1"
+    "minimal|minimalist wallpaper dark|2"
+)
+
+# Create all category folders
+declare -A FOLDER_COUNTS
+for entry in "${CATEGORIES[@]}"; do
+    IFS='|' read -r folder _ _ <<< "$entry"
+    mkdir -p "$DEST/$folder"
+    FOLDER_COUNTS[$folder]=0
+done
+
+download_category() {
+    local folder="$1"
+    local query="$2"
+    local pages="$3"
+    local count=0
+
+    for page in $(seq 1 "$pages"); do
+        # Fetch top-rated 4K+ wallpapers
+        local response
+        response=$(curl -s "${WALLHAVEN}?q=${query// /+}&categories=100&purity=100&atleast=3840x2160&sorting=toplist&topRange=1y&page=${page}" 2>/dev/null)
+
+        if [ -z "$response" ]; then
+            echo "  API request failed for: $query (page $page)"
+            continue
+        fi
+
+        # Parse URLs and download
+        local urls
+        urls=$(echo "$response" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    for w in data.get('data', []):
+        print(w['path'])
+except: pass
+" 2>/dev/null)
+
+        while IFS= read -r url; do
+            [ -z "$url" ] && continue
+            local filename
+            filename=$(basename "$url")
+            local target="$DEST/$folder/$filename"
+
+            if [ -f "$target" ]; then
+                count=$((count + 1))
+                continue
+            fi
+
+            curl -sL --max-time 30 -o "$target" "$url" 2>/dev/null
+            if [ -f "$target" ] && [ -s "$target" ]; then
+                count=$((count + 1))
+            else
+                rm -f "$target" 2>/dev/null
+            fi
+        done <<< "$urls"
+
+        # Rate limit - be nice to wallhaven
+        sleep 1
+    done
+
+    FOLDER_COUNTS[$folder]=$(( ${FOLDER_COUNTS[$folder]} + count ))
+    echo "  $folder/$query: $count wallpapers"
 }
 
-echo "=== Cityscapes ==="
-download cityscapes "cyberpunk-city-neon.jpg" "https://unsplash.com/photos/dA0-qxdbyyY/download?w=3840"
-download cityscapes "cyberpunk-dark-city.jpg" "https://unsplash.com/photos/eIe-KSCAbMU/download?w=3840"
-download cityscapes "cyberpunk-skyscrapers.jpg" "https://unsplash.com/photos/x66ubRvGXM8/download?w=3840"
-download cityscapes "tokyo-neon-street.jpg" "https://unsplash.com/photos/YNLIep6Pn4g/download?w=3840"
-download cityscapes "tokyo-neon-alley.jpg" "https://unsplash.com/photos/IwPKcaH-DaQ/download?w=3840"
-download cityscapes "tokyo-neon-signs.jpg" "https://unsplash.com/photos/cbwlHckGxAk/download?w=3840"
-download cityscapes "nyc-skyline-night.jpg" "https://unsplash.com/photos/GmlMtdSfmVU/download?w=3840"
-download cityscapes "nyc-bridge-night.jpg" "https://unsplash.com/photos/_e3RZ8jDOUo/download?w=3840"
-download cityscapes "nyc-tribute-in-light.jpg" "https://unsplash.com/photos/7YBXY3SnhSc/download?w=3840"
+# Download all categories
+TOTAL=0
+for entry in "${CATEGORIES[@]}"; do
+    IFS='|' read -r folder query pages <<< "$entry"
+    echo "=== $folder: $query ==="
+    download_category "$folder" "$query" "$pages"
+done
 
-echo "=== Nature ==="
-download nature "aurora-borealis.jpg" "https://unsplash.com/photos/jwIk4Z3Msi4/download?w=3840"
-download nature "aurora-bright-sky.jpg" "https://unsplash.com/photos/m5oOEXIRWdU/download?w=3840"
-download nature "aurora-tree-silhouettes.jpg" "https://unsplash.com/photos/62V7ntlKgL8/download?w=3840"
-download nature "moraine-lake-reflection.jpg" "https://unsplash.com/photos/DlkF4-dbCOU/download?w=3840"
-download nature "mountain-lake-peaceful.jpg" "https://unsplash.com/photos/ZYY2lNM-J1Y/download?w=3840"
-download nature "matterhorn-reflection.jpg" "https://unsplash.com/photos/qnPEmE8M1c4/download?w=3840"
-download nature "deep-ocean-diver.jpg" "https://unsplash.com/photos/FuusC7lfg6Q/download?w=3840"
-download nature "coral-reef.jpg" "https://unsplash.com/photos/FiAuI0Wen2I/download?w=3840"
-download nature "deep-ocean-blue.jpg" "https://unsplash.com/photos/DnNqjwalv9g/download?w=3840"
-
-echo "=== Sci-Fi ==="
-download scifi "space-station-astronaut.jpg" "https://unsplash.com/photos/X19mJVgTZfo/download?w=3840"
-download scifi "space-station-orbit.jpg" "https://unsplash.com/photos/rDaxHYjJC1o/download?w=3840"
-download scifi "space-station-detail.jpg" "https://unsplash.com/photos/f-wULBP2iNE/download?w=3840"
-download scifi "nebula-red-deep-space.jpg" "https://unsplash.com/photos/pr_kNwZtYM0/download?w=3840"
-download scifi "nebula-cosmic-gases.jpg" "https://unsplash.com/photos/G-5JCERzbE8/download?w=3840"
-download scifi "nebula-spacecraft.jpg" "https://unsplash.com/photos/AJZ_75RTpL0/download?w=3840"
-download scifi "shuttle-earth-atmosphere.jpg" "https://unsplash.com/photos/7Cz6bWjdlDs/download?w=3840"
-
-echo "=== Gaming - Baldur's Gate 3 ==="
-download gaming "bg3-official-art.jpg" "https://w.wallhaven.cc/full/3l/wallhaven-3l651y.jpg"
-download gaming "bg3-landscape.jpg" "https://w.wallhaven.cc/full/1p/wallhaven-1pgxjg.jpg"
-
-echo "=== Gaming - Final Fantasy ==="
-download gaming "ff7r-characters.png" "https://w.wallhaven.cc/full/gp/wallhaven-gpdkrl.png"
-download gaming "ff7-rebirth-nibel.png" "https://w.wallhaven.cc/full/7p/wallhaven-7pd15e.png"
-download gaming "ff16-odin.png" "https://w.wallhaven.cc/full/gw/wallhaven-gwz773.png"
-download gaming "ff16-key-art.png" "https://w.wallhaven.cc/full/we/wallhaven-we2pmp.png"
-download gaming "ff16-clive.png" "https://w.wallhaven.cc/full/je/wallhaven-je933m.png"
-download gaming "ffx-tidus.jpg" "https://w.wallhaven.cc/full/qz/wallhaven-qzv2el.jpg"
-
-echo "=== Weird ==="
-download weird "psychedelic-swirl.jpg" "https://unsplash.com/photos/JKWPpiBTatw/download?w=3840"
-download weird "abstract-vibrant.jpg" "https://unsplash.com/photos/u-VOCC2yg9s/download?w=3840"
-download weird "psychedelic-fractal.jpg" "https://unsplash.com/photos/ikys5rulD-0/download?w=3840"
-download weird "glitch-digital.jpg" "https://unsplash.com/photos/ZXN1cb4-Lww/download?w=3840"
-download weird "glitch-red-black.jpg" "https://unsplash.com/photos/2G9YVbjwE-Q/download?w=3840"
-download weird "glitch-vibrant.jpg" "https://unsplash.com/photos/Xl_5sYauFFE/download?w=3840"
-download weird "cosmic-horror-surreal.jpg" "https://unsplash.com/photos/zn7Lp_XO0D0/download?w=3840"
-download weird "glitch-symbols.jpg" "https://unsplash.com/photos/7L_hW0SArAY/download?w=3840"
-download weird "glitch-dark-abstract.jpg" "https://unsplash.com/photos/76SsNhsVPkU/download?w=3840"
-
+# Remove any empty/corrupt files (< 50KB is likely broken)
 echo ""
-echo "=== Done! ==="
-echo "Downloaded to: $DEST"
+echo "Cleaning up broken downloads..."
+find "$DEST" -type f -size -50k -name "*.jpg" -o -name "*.png" | while read -r f; do
+    echo "  Removed broken: $(basename "$f")"
+    rm -f "$f"
+done
+
+# Summary
+echo ""
+echo "=== Download Complete ==="
+echo "Location: $DEST"
 echo ""
 echo "Categories:"
-for dir in cityscapes nature scifi gaming weird; do
-    count=$(find "$DEST/$dir" -type f 2>/dev/null | wc -l)
-    echo "  $dir: $count wallpapers"
+GRAND_TOTAL=0
+for folder in nature space cyberpunk cityscapes abstract scifi dark gaming anime minimal; do
+    if [ -d "$DEST/$folder" ]; then
+        count=$(find "$DEST/$folder" -type f 2>/dev/null | wc -l)
+        GRAND_TOTAL=$((GRAND_TOTAL + count))
+        echo "  $folder: $count wallpapers"
+    fi
 done
 echo ""
-echo "To set a wallpaper:"
+echo "Total: $GRAND_TOTAL wallpapers"
+echo ""
+echo "Set wallpaper:"
 echo "  gsettings set org.gnome.desktop.background picture-uri-dark 'file:///path/to/wallpaper.jpg'"
+echo ""
+echo "Random wallpaper:"
+echo "  WALL=\$(find $DEST -type f | shuf -n1) && gsettings set org.gnome.desktop.background picture-uri-dark \"file://\$WALL\""

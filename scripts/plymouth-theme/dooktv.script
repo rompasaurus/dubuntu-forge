@@ -30,11 +30,56 @@ splash_sprite.SetX(screen_width / 2 - scaled_width / 2);
 splash_sprite.SetY(screen_height / 2 - scaled_height / 2);
 splash_sprite.SetImage(splash.Scale(scaled_width, scaled_height));
 
-/* Progress bar */
-bar_bg = Image("progress-bg.png");
-bar_fill = Image("progress-fill.png");
+/* Progress bar setup */
+bar_width = Math.Int(screen_width * 0.4);
+bar_height = 8;
+bar_x = screen_width / 2 - bar_width / 2;
+bar_y = screen_height * 0.85;
 
-/* Hide password prompt styling (for encrypted disks) */
+/* Draw background bar (dark grey) */
+bar_bg = Image(bar_width, bar_height);
+for (x = 0; x < bar_width; x++)
+    for (y = 0; y < bar_height; y++)
+        bar_bg.SetPixel(x, y, 0.15, 0.15, 0.2, 0.8);
+
+bar_bg_sprite = Sprite(bar_bg);
+bar_bg_sprite.SetX(bar_x);
+bar_bg_sprite.SetY(bar_y);
+bar_bg_sprite.SetZ(10);
+
+/* Progress fill sprite (starts empty) */
+bar_fill_sprite = Sprite();
+bar_fill_sprite.SetX(bar_x);
+bar_fill_sprite.SetY(bar_y);
+bar_fill_sprite.SetZ(11);
+
+/* Boot progress callback */
+fun boot_progress_callback(duration, progress) {
+    global.bar_fill_sprite;
+    global.bar_width;
+    global.bar_height;
+    global.bar_x;
+    global.bar_y;
+
+    fill_width = Math.Int(bar_width * progress);
+    if (fill_width < 1)
+        fill_width = 1;
+
+    bar_fill = Image(fill_width, bar_height);
+    for (x = 0; x < fill_width; x++)
+        for (y = 0; y < bar_height; y++) {
+            /* Orange-to-cyan gradient matching the splash style */
+            r = 1.0 - (x / fill_width) * 0.7;
+            g = 0.4 + (x / fill_width) * 0.5;
+            b = 0.1 + (x / fill_width) * 0.9;
+            bar_fill.SetPixel(x, y, r, g, b, 1.0);
+        }
+
+    bar_fill_sprite.SetImage(bar_fill);
+}
+Plymouth.SetBootProgressFunction(boot_progress_callback);
+
+/* Password prompt styling (for encrypted disks) */
 fun display_password_callback(prompt, bullets) {
     global.password_entry;
     if (!password_entry) {
@@ -61,3 +106,14 @@ fun message_callback(text) {
     message_sprite.SetY(screen_height - 50);
 }
 Plymouth.SetMessageFunction(message_callback);
+
+/* Refresh callback - keeps the theme alive throughout boot */
+fun refresh_callback() {
+    /* Nothing to animate, but must be registered to prevent fallback */
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+/* Quit callback - clean exit without fallback */
+fun quit_callback() {
+}
+Plymouth.SetQuitFunction(quit_callback);
