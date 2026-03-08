@@ -1,18 +1,24 @@
 #!/usr/bin/env bash
 #
 # Fix HDMI audio for Intel Arc B580 (Battlemage) with DP-to-HDMI adapter
+# (Cable Matters DP 1.4 to HDMI 2.1 / Parade PS186)
 #
-# The xe display driver doesn't always enable the HDA audio output pin
-# when using a DisplayPort-to-HDMI adapter, resulting in silent output
-# despite PipeWire/ALSA showing everything as connected and running.
+# Problem: The xe display driver (kernel 6.17) doesn't embed audio into
+# the DisplayPort stream when using an active DP-to-HDMI adapter.
+# The HDA codec is configured correctly but no audio reaches the TV.
 #
-# This script:
-#   1. Installs alsa-tools (provides hda-verb)
-#   2. Enables the HDMI audio output pin on the HDA codec
-#   3. Installs a systemd service to re-apply the fix on every boot
-#   4. Installs a udev rule to re-apply when the sound card is hot-plugged
+# Solution: Use the GPU's native HDMI port for audio to the receiver,
+# and the DP adapter for 4K@120Hz video to the TV. A custom PipeWire
+# sink is created that explicitly targets the HDMI ALSA device (hw:1,7)
+# for the Denon AVR, bypassing the broken DP audio path entirely.
 #
-# Run with: bash scripts/setup-hdmi-audio-fix.sh
+# Setup:
+#   Video: Arc B580 DP → Cable Matters adapter → Samsung QBQ90 (4K@120Hz)
+#   Audio: Arc B580 HDMI → Denon AVR (7.1 surround)
+#
+# Usage:
+#   bash scripts/setup-hdmi-audio-fix.sh          # Install
+#   bash scripts/setup-hdmi-audio-fix.sh --undo   # Remove everything
 #
 set -euo pipefail
 
@@ -27,184 +33,231 @@ info() { echo -e "${CYAN}[*]${NC} $*"; }
 warn() { echo -e "${YELLOW}[!]${NC} $*"; }
 err()  { echo -e "${RED}[x]${NC} $*"; }
 
+PIPEWIRE_CONF="$HOME/.config/pipewire/pipewire.conf.d/denon-hdmi-sink.conf"
+OLD_FIXSCRIPT="/usr/local/bin/fix-hdmi-audio.sh"
+OLD_SERVICE="/etc/systemd/system/fix-hdmi-audio.service"
+OLD_UDEV="/etc/udev/rules.d/91-fix-hdmi-audio.rules"
+
+# ─── Undo mode ────────────────────────────────────────────────────────────
+if [[ "${1:-}" == "--undo" ]]; then
+    echo -e "${CYAN}"
+    echo "  ┌──────────────────────────────────────────┐"
+    echo "  │   HDMI Audio Fix — Uninstall              │"
+    echo "  └──────────────────────────────────────────┘"
+    echo -e "${NC}"
+
+    # Remove PipeWire custom sink
+    if [ -f "$PIPEWIRE_CONF" ]; then
+        rm -f "$PIPEWIRE_CONF"
+        log "Removed $PIPEWIRE_CONF"
+    else
+        info "PipeWire config not found (already clean)."
+    fi
+
+    # Remove old systemd/udev artifacts (requires sudo)
+    if systemctl is-enabled fix-hdmi-audio.service &>/dev/null; then
+        sudo systemctl disable fix-hdmi-audio.service
+        log "Systemd service disabled."
+    fi
+    for f in "$OLD_FIXSCRIPT" "$OLD_SERVICE" "$OLD_UDEV"; do
+        if [ -f "$f" ]; then
+            sudo rm -f "$f"
+            log "Removed $f"
+        fi
+    done
+    if [ -f "$OLD_SERVICE" ] || [ -f "$OLD_UDEV" ]; then
+        sudo systemctl daemon-reload 2>/dev/null || true
+        sudo udevadm control --reload-rules 2>/dev/null || true
+    fi
+
+    # Restart PipeWire to apply
+    systemctl --user restart pipewire pipewire-pulse wireplumber 2>/dev/null || true
+
+    echo ""
+    log "Undo complete. All HDMI audio fix artifacts removed."
+    exit 0
+fi
+
+# ─── Install mode ─────────────────────────────────────────────────────────
 echo -e "${CYAN}"
 echo "  ┌──────────────────────────────────────────┐"
 echo "  │   HDMI Audio Fix                          │"
 echo "  │   Intel Arc B580 + DP-to-HDMI Adapter     │"
+echo "  │                                           │"
+echo "  │   Video: DP adapter → TV (4K@120Hz)       │"
+echo "  │   Audio: HDMI → Denon AVR (7.1)           │"
 echo "  └──────────────────────────────────────────┘"
 echo -e "${NC}"
 
-# ─── Configuration ─────────────────────────────────────────────────────────
-# Card 1 = HDA Intel PCH (HDMI audio companion to Arc B580)
-# Codec address 2 = Intel Battlemage HDMI codec
-# Node 0x04 = Pin Complex for HDMI 0 output
-# Pin-ctl 0x40 = OUT enable bit
-HDA_DEVICE="/dev/snd/hwC1D2"
-PIN_NODE="0x04"
-PIN_CTL_OUT="0x40"
+# ─── Verify HDMI connection to receiver ──────────────────────────────────
 
-# ─── Install alsa-tools ───────────────────────────────────────────────────
-
-if ! command -v hda-verb &>/dev/null; then
-    info "Installing alsa-tools (provides hda-verb)..."
-    sudo apt update -qq
-    sudo apt install -y alsa-tools
-    log "alsa-tools installed."
+info "Checking for Denon AVR on HDMI..."
+if aplay -l 2>/dev/null | grep -q "DENON-AVR"; then
+    log "Denon AVR detected on HDMI."
 else
-    info "hda-verb already available."
+    warn "Denon AVR not detected. Make sure HDMI cable is connected"
+    warn "from the Arc B580 HDMI port to your Denon receiver."
+    warn ""
+    warn "If the receiver doesn't appear, try:"
+    warn "  for i in 1 2 3 4; do echo detect | sudo tee /sys/class/drm/card0-HDMI-A-\$i/status; done"
+    warn ""
+    # Find what IS on HDMI
+    HDMI_DEVICES=$(aplay -l 2>/dev/null | grep "HDMI" || true)
+    if [ -n "$HDMI_DEVICES" ]; then
+        info "Available HDMI devices:"
+        echo "$HDMI_DEVICES"
+    fi
 fi
 
-# ─── Verify HDA device exists ─────────────────────────────────────────────
+# ─── Detect ALSA device number for Denon ─────────────────────────────────
 
-if [ ! -e "$HDA_DEVICE" ]; then
-    err "HDA device $HDA_DEVICE not found."
-    err "Check your sound card layout with: ls /dev/snd/hwC*"
-    err "And codec with: cat /proc/asound/card1/codec#*"
-    exit 1
-fi
-
-# ─── Apply the fix now ────────────────────────────────────────────────────
-
-info "Enabling HDMI audio output pin..."
-info "  Device: $HDA_DEVICE  Pin: $PIN_NODE  Control: $PIN_CTL_OUT"
-
-sudo hda-verb "$HDA_DEVICE" "$PIN_NODE" SET_PIN_WIDGET_CONTROL "$PIN_CTL_OUT"
-log "HDMI audio output pin enabled."
-
-# ─── Verify pin control was set ───────────────────────────────────────────
-
-sleep 1
-PIN_STATUS=$(grep -A 20 "Node 0x04" /proc/asound/card1/codec#2 | grep "Pin-ctls" || true)
-if echo "$PIN_STATUS" | grep -q "0x40\|OUT"; then
-    log "Verified: Pin-ctls shows output enabled."
-else
-    warn "Pin-ctls status: $PIN_STATUS"
-    warn "Pin may not have been set correctly — check audio output."
-fi
-
-# ─── Install fix script to /usr/local/bin ──────────────────────────────────
-
-FIXSCRIPT="/usr/local/bin/fix-hdmi-audio.sh"
-info "Installing persistent fix script to $FIXSCRIPT..."
-
-sudo tee "$FIXSCRIPT" > /dev/null <<'SCRIPT'
-#!/usr/bin/env bash
-#
-# Fix HDMI audio output pin for Intel Battlemage (Arc B580)
-# Called by systemd service and udev rule on boot / hotplug
-#
-HDA_DEVICE="/dev/snd/hwC1D2"
-PIN_NODE="0x04"
-PIN_CTL="0x40"
-
-# Wait for the HDA device to be ready
-for i in $(seq 1 30); do
-    [ -e "$HDA_DEVICE" ] && break
-    sleep 1
+DENON_DEV=""
+for dev in 3 7 8 9; do
+    name=$(head -1 /proc/asound/card1/pcm${dev}p/sub0/info 2>/dev/null | awk -F': ' '{print $2}')
+    id=$(grep "^id:" /proc/asound/card1/pcm${dev}p/sub0/info 2>/dev/null | awk '{print $2}')
+    subname=$(grep "^name:" /proc/asound/card1/pcm${dev}p/sub0/info 2>/dev/null | awk '{print $2}')
+    # Check ELD for this device
+    for eld in /proc/asound/card1/eld#2.*; do
+        eld_valid=$(grep "eld_valid" "$eld" 2>/dev/null | awk '{print $2}')
+        monitor=$(grep "monitor_name" "$eld" 2>/dev/null | awk '{print $2}')
+        if [ "$eld_valid" = "1" ] && echo "$monitor" | grep -qi "denon"; then
+            # Match ELD to PCM device via pin
+            DENON_DEV="$dev"
+            break 2
+        fi
+    done
 done
 
-if [ ! -e "$HDA_DEVICE" ]; then
-    echo "fix-hdmi-audio: $HDA_DEVICE not found after 30s, giving up." >&2
+# Fallback: check aplay -l output
+if [ -z "$DENON_DEV" ]; then
+    DENON_DEV=$(aplay -l 2>/dev/null | grep "DENON-AVR" | head -1 | sed 's/.*device \([0-9]*\).*/\1/')
+fi
+
+if [ -z "$DENON_DEV" ]; then
+    err "Could not determine ALSA device number for Denon AVR."
+    err "Check with: aplay -l | grep DENON"
     exit 1
 fi
 
-# Small delay to let the codec fully initialize
-sleep 2
+log "Denon AVR is on ALSA hw:1,$DENON_DEV"
 
-# Enable the output pin
-hda-verb "$HDA_DEVICE" "$PIN_NODE" SET_PIN_WIDGET_CONTROL "$PIN_CTL" 2>/dev/null
-echo "fix-hdmi-audio: Enabled HDMI output pin on $HDA_DEVICE node $PIN_NODE"
-SCRIPT
+# ─── Create PipeWire custom sink ─────────────────────────────────────────
+#
+# The default PipeWire/WirePlumber profile system doesn't correctly map
+# the Battlemage HDMI codec's dynamic pin-to-PCM assignments. Creating
+# an explicit ALSA sink that targets hw:1,<device> bypasses this issue.
+#
 
-sudo chmod +x "$FIXSCRIPT"
-log "Fix script installed."
+info "Creating PipeWire sink for Denon AVR..."
+mkdir -p "$(dirname "$PIPEWIRE_CONF")"
 
-# ─── Create systemd service for boot persistence ──────────────────────────
+cat > "$PIPEWIRE_CONF" <<EOF
+context.objects = [
+    {   factory = adapter
+        args = {
+            factory.name     = api.alsa.pcm.sink
+            node.name        = "alsa_output.denon-avr"
+            node.description = "DENON-AVR HDMI 7.1"
+            media.class      = "Audio/Sink"
+            api.alsa.path    = "hw:1,$DENON_DEV"
+            audio.format     = "S32LE"
+            audio.rate       = 48000
+            audio.channels   = 8
+            audio.position   = [ FL FR RL RR FC LFE SL SR ]
+        }
+    }
+]
+EOF
 
-SERVICE_FILE="/etc/systemd/system/fix-hdmi-audio.service"
-info "Creating systemd service for boot persistence..."
+log "Created $PIPEWIRE_CONF"
 
-sudo tee "$SERVICE_FILE" > /dev/null <<'SERVICE'
-[Unit]
-Description=Fix HDMI audio output pin for Intel Arc B580
-After=sound.target
-Wants=sound.target
+# ─── Restart PipeWire and set default ────────────────────────────────────
 
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/fix-hdmi-audio.sh
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-SERVICE
-
-sudo systemctl daemon-reload
-sudo systemctl enable fix-hdmi-audio.service
-log "Systemd service enabled (runs on every boot)."
-
-# ─── Create udev rule for hotplug persistence ─────────────────────────────
-
-UDEV_RULE="/etc/udev/rules.d/91-fix-hdmi-audio.rules"
-info "Creating udev rule for display hotplug..."
-
-sudo tee "$UDEV_RULE" > /dev/null <<'UDEV'
-# Re-enable HDMI audio pin when the HDA Intel PCH sound card appears
-# Triggered on boot and when DP-to-HDMI adapter is re-plugged
-ACTION=="add|change", SUBSYSTEM=="sound", ATTRS{vendor}=="0x8086", \
-  RUN+="/usr/local/bin/fix-hdmi-audio.sh"
-UDEV
-
-sudo udevadm control --reload-rules
-log "Udev rule installed."
-
-# ─── Restart PipeWire to pick up changes ───────────────────────────────────
-
-info "Restarting PipeWire audio stack..."
+info "Restarting PipeWire..."
 systemctl --user restart pipewire pipewire-pulse wireplumber 2>/dev/null || true
-sleep 2
-log "PipeWire restarted."
+sleep 3
 
-# ─── Verification ─────────────────────────────────────────────────────────
+# Find the new sink and set as default
+DENON_SINK=$(wpctl status 2>/dev/null | grep "DENON-AVR" | head -1 | awk '{print $1}' | tr -d '.*')
+if [ -n "$DENON_SINK" ]; then
+    wpctl set-default "$DENON_SINK"
+    wpctl set-volume "$DENON_SINK" 1.0
+    log "Set DENON-AVR (sink $DENON_SINK) as default audio output."
+else
+    warn "Could not find DENON-AVR sink. Set it manually in GNOME Sound settings."
+fi
+
+# ─── Quick audio test ────────────────────────────────────────────────────
+
+info "Playing test tone (2 seconds)..."
+echo ""
+timeout 3 speaker-test -D "plughw:1,$DENON_DEV" -c 2 -l 1 -t sine 2>&1 || true
+echo ""
+
+# ─── Clean up old artifacts ──────────────────────────────────────────────
+#
+# Remove the previous hda-verb / module-reload approach that didn't work.
+#
+
+CLEANED=false
+for f in "$OLD_FIXSCRIPT" "$OLD_SERVICE" "$OLD_UDEV"; do
+    if [ -f "$f" ]; then
+        info "Cleaning up old fix artifact: $f"
+        sudo rm -f "$f" 2>/dev/null || warn "Could not remove $f (run with sudo)"
+        CLEANED=true
+    fi
+done
+if systemctl is-enabled fix-hdmi-audio.service &>/dev/null 2>&1; then
+    sudo systemctl disable fix-hdmi-audio.service 2>/dev/null || true
+    CLEANED=true
+fi
+if $CLEANED; then
+    sudo systemctl daemon-reload 2>/dev/null || true
+    sudo udevadm control --reload-rules 2>/dev/null || true
+    log "Old fix artifacts cleaned up."
+fi
+
+# ─── Verification ───────────────────────────────────────────────────────
 
 echo ""
 info "Verification:"
 
-# Pin control
-PIN_CHECK=$(grep -A 20 "Node 0x04" /proc/asound/card1/codec#2 | grep "Pin-ctls" || true)
-if echo "$PIN_CHECK" | grep -q "0x40\|OUT"; then
-    echo -e "  ${GREEN}✓${NC} HDMI output pin enabled"
+# Denon in aplay
+if aplay -l 2>/dev/null | grep -q "DENON-AVR"; then
+    echo -e "  ${GREEN}✓${NC} Denon AVR detected (ALSA hw:1,$DENON_DEV)"
 else
-    echo -e "  ${YELLOW}✗${NC} Pin status: $PIN_CHECK"
+    echo -e "  ${YELLOW}✗${NC} Denon AVR not in aplay output"
 fi
 
-# Systemd service
-if systemctl is-enabled fix-hdmi-audio.service &>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} Systemd service enabled (boot persistence)"
+# PipeWire sink
+if wpctl status 2>/dev/null | grep -q "DENON-AVR"; then
+    echo -e "  ${GREEN}✓${NC} DENON-AVR PipeWire sink active"
 else
-    echo -e "  ${YELLOW}✗${NC} Systemd service not enabled"
+    echo -e "  ${YELLOW}✗${NC} DENON-AVR sink not found in PipeWire"
 fi
 
-# Udev rule
-if [ -f "$UDEV_RULE" ]; then
-    echo -e "  ${GREEN}✓${NC} Udev rule installed (hotplug persistence)"
+# Default sink
+DEFAULT=$(wpctl status 2>/dev/null | grep "Audio/Sink" | head -1 || true)
+if echo "$DEFAULT" | grep -q "denon-avr"; then
+    echo -e "  ${GREEN}✓${NC} Set as default audio output"
 else
-    echo -e "  ${YELLOW}✗${NC} Udev rule not found"
+    echo -e "  ${YELLOW}!${NC} Not set as default (select in GNOME Sound settings)"
 fi
 
-# Fix script
-if [ -x "$FIXSCRIPT" ]; then
-    echo -e "  ${GREEN}✓${NC} Fix script installed at $FIXSCRIPT"
-else
-    echo -e "  ${YELLOW}✗${NC} Fix script not found"
+# PipeWire config
+if [ -f "$PIPEWIRE_CONF" ]; then
+    echo -e "  ${GREEN}✓${NC} PipeWire config: $PIPEWIRE_CONF"
 fi
 
 echo ""
-log "Done! Try playing audio now."
-info "The fix will re-apply automatically on boot and adapter hotplug."
+log "Done!"
 info ""
-info "To undo this fix:"
-info "  sudo systemctl disable fix-hdmi-audio.service"
-info "  sudo rm $FIXSCRIPT $SERVICE_FILE $UDEV_RULE"
-info "  sudo systemctl daemon-reload && sudo udevadm control --reload-rules"
+info "Setup:"
+info "  Video: DP adapter → Samsung QBQ90 (4K@120Hz)"
+info "  Audio: HDMI → Denon AVR (7.1 surround)"
+info ""
+info "Tip: Disable the Denon's video in Settings → Displays"
+info "     so it doesn't extend your desktop."
+info ""
+info "To uninstall: bash scripts/setup-hdmi-audio-fix.sh --undo"
 echo ""
