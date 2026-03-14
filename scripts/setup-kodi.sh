@@ -387,11 +387,12 @@ cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/mainmenu.DATA.xml" << 'X
 XMLEOF
 
 # Submenus
-cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/movies.DATA.xml" << 'XMLEOF'
+cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/mainmenu.movies.DATA.xml" << 'XMLEOF'
 <shortcuts>
     <shortcut>
         <defaultID>movies-titles</defaultID>
         <label>All Movies</label>
+        <label2></label2>
         <icon>DefaultMovies.png</icon>
         <thumb></thumb>
         <action>ActivateWindow(Videos,videodb://movies/titles/,return)</action>
@@ -399,6 +400,7 @@ cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/movies.DATA.xml" << 'XML
     <shortcut>
         <defaultID>movies-genres</defaultID>
         <label>Genres</label>
+        <label2></label2>
         <icon>DefaultGenre.png</icon>
         <thumb></thumb>
         <action>ActivateWindow(Videos,videodb://movies/genres/,return)</action>
@@ -406,6 +408,7 @@ cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/movies.DATA.xml" << 'XML
     <shortcut>
         <defaultID>movies-years</defaultID>
         <label>Years</label>
+        <label2></label2>
         <icon>DefaultYear.png</icon>
         <thumb></thumb>
         <action>ActivateWindow(Videos,videodb://movies/years/,return)</action>
@@ -413,6 +416,7 @@ cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/movies.DATA.xml" << 'XML
     <shortcut>
         <defaultID>movies-recent</defaultID>
         <label>Recently Added</label>
+        <label2></label2>
         <icon>DefaultRecentlyAddedMovies.png</icon>
         <thumb></thumb>
         <action>ActivateWindow(Videos,videodb://recentlyaddedmovies/,return)</action>
@@ -420,11 +424,12 @@ cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/movies.DATA.xml" << 'XML
 </shortcuts>
 XMLEOF
 
-cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/tvshows.DATA.xml" << 'XMLEOF'
+cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/mainmenu.tvshows.DATA.xml" << 'XMLEOF'
 <shortcuts>
     <shortcut>
         <defaultID>tvshows-titles</defaultID>
         <label>All TV Shows</label>
+        <label2></label2>
         <icon>DefaultTVShows.png</icon>
         <thumb></thumb>
         <action>ActivateWindow(Videos,videodb://tvshows/titles/,return)</action>
@@ -432,6 +437,7 @@ cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/tvshows.DATA.xml" << 'XM
     <shortcut>
         <defaultID>tvshows-genres</defaultID>
         <label>Genres</label>
+        <label2></label2>
         <icon>DefaultGenre.png</icon>
         <thumb></thumb>
         <action>ActivateWindow(Videos,videodb://tvshows/genres/,return)</action>
@@ -439,6 +445,7 @@ cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/tvshows.DATA.xml" << 'XM
     <shortcut>
         <defaultID>tvshows-recent</defaultID>
         <label>Recently Added Episodes</label>
+        <label2></label2>
         <icon>DefaultRecentlyAddedEpisodes.png</icon>
         <thumb></thumb>
         <action>ActivateWindow(Videos,videodb://recentlyaddedepisodes/,return)</action>
@@ -446,12 +453,20 @@ cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/tvshows.DATA.xml" << 'XM
     <shortcut>
         <defaultID>tvshows-inprogress</defaultID>
         <label>In Progress</label>
+        <label2></label2>
         <icon>DefaultInProgressShows.png</icon>
         <thumb></thumb>
         <action>ActivateWindow(Videos,videodb://inprogresstvshows/,return)</action>
     </shortcut>
 </shortcuts>
 XMLEOF
+
+# Empty submenu files for items without submenus (prevents build errors)
+for menuid in genres search recently-added settings; do
+    cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/mainmenu.${menuid}.DATA.xml" << 'SUBEOF'
+<shortcuts />
+SUBEOF
+done
 
 # Apply guisettings patches via Python
 python3 << 'PYEOF'
