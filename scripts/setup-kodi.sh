@@ -116,6 +116,18 @@ for addon in "${ADDONS[@]}"; do
 done
 
 rm -f "$ADDON_INDEX"
+
+# Generate script-skinshortcuts-includes.xml so the skin can render on first launch.
+# Without this file, the skin's home menu fails to load and Kodi freezes.
+SKIN_1080I="${KODI_ADDONS}/skin.arctic.zephyr.mod/1080i"
+if [ ! -f "${SKIN_1080I}/script-skinshortcuts-includes.xml" ]; then
+    echo "  Generating skinshortcuts includes (required for first launch)..."
+    cat > "${SKIN_1080I}/script-skinshortcuts-includes.xml" << 'INCXML'
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Auto-generated skinshortcuts includes - will be rebuilt by Kodi -->
+<includes />
+INCXML
+fi
 echo "  Skin installation complete."
 
 # -----------------------------------------------
@@ -235,8 +247,9 @@ c = conn.cursor()
 
 movie_scraper = "metadata.themoviedb.org.python"
 tv_scraper = "metadata.tvshows.themoviedb.org.python"
-movie_settings = '<settings><setting id="certprefix" default="true">us</setting><setting id="fanart">true</setting><setting id="keeporiginaltitle" default="true">false</setting><setting id="language" default="true">en-US</setting><setting id="RatingS" default="true">TMDb</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="trailer">true</setting></settings>'
-tv_settings = '<settings><setting id="certprefix" default="true">us</setting><setting id="fanart">true</setting><setting id="keeporiginaltitle" default="true">false</setting><setting id="language" default="true">en-US</setting><setting id="RatingS" default="true">TMDb</setting><setting id="tmdbcertcountry" default="true">us</setting><setting id="episodeimages">true</setting></settings>'
+# Let Kodi use the scraper's own default settings to avoid format mismatches
+movie_settings = ''
+tv_settings = ''
 
 mount = "$MOUNT_POINT"
 
@@ -331,56 +344,53 @@ fi
 # Skin shortcuts menu - clear hash to force rebuild
 rm -f "${KODI_USERDATA}/addon_data/script.skinshortcuts/skin.arctic.zephyr.mod.hash" 2>/dev/null
 
-# Main menu with Movies, TV Shows, Genres, Search
+# Custom main menu: Movies, TV Shows, Genres, Search, Recently Added, Settings
+# NOTE: <label2> MUST be "Common Shortcut" — empty label2 crashes script.skinshortcuts
+# The skin's bundled submenu defaults (x1111.DATA.xml, etc.) are used automatically
 mkdir -p "${KODI_USERDATA}/addon_data/script.skinshortcuts"
 cat > "${KODI_USERDATA}/addon_data/script.skinshortcuts/mainmenu.DATA.xml" << 'XMLEOF'
+<?xml version='1.0' encoding='UTF-8'?>
 <shortcuts>
     <shortcut>
+        <label>20342</label>
+        <label2>Common Shortcut</label2>
         <defaultID>movies</defaultID>
-        <label>Movies</label>
-        <label2>32034</label2>
-        <icon>DefaultMovies.png</icon>
-        <thumb></thumb>
-        <action>ActivateWindow(Videos,videodb://movies/titles/,return)</action>
+        <icon>special://skin/extras/icons/film.png</icon>
+        <action>ActivateWindow(Videos,MovieTitles,return)</action>
     </shortcut>
     <shortcut>
+        <label>20343</label>
+        <label2>Common Shortcut</label2>
         <defaultID>tvshows</defaultID>
-        <label>TV Shows</label>
-        <label2>32035</label2>
-        <icon>DefaultTVShows.png</icon>
-        <thumb></thumb>
-        <action>ActivateWindow(Videos,videodb://tvshows/titles/,return)</action>
+        <icon>special://skin/extras/icons/tv.png</icon>
+        <action>ActivateWindow(Videos,TVShowTitles,return)</action>
     </shortcut>
     <shortcut>
-        <defaultID>genres</defaultID>
         <label>Genres</label>
-        <label2></label2>
+        <label2>Common Shortcut</label2>
+        <defaultID>genres</defaultID>
         <icon>DefaultGenre.png</icon>
-        <thumb></thumb>
         <action>ActivateWindow(Videos,videodb://movies/genres/,return)</action>
     </shortcut>
     <shortcut>
-        <defaultID>search</defaultID>
         <label>Search</label>
-        <label2></label2>
+        <label2>Common Shortcut</label2>
+        <defaultID>search</defaultID>
         <icon>DefaultAddonsSearch.png</icon>
-        <thumb></thumb>
         <action>RunScript(script.globalsearch)</action>
     </shortcut>
     <shortcut>
-        <defaultID>recently-added</defaultID>
         <label>Recently Added</label>
-        <label2></label2>
+        <label2>Common Shortcut</label2>
+        <defaultID>recently-added</defaultID>
         <icon>DefaultRecentlyAddedMovies.png</icon>
-        <thumb></thumb>
         <action>ActivateWindow(Videos,videodb://recentlyaddedmovies/,return)</action>
     </shortcut>
     <shortcut>
+        <label>10004</label>
+        <label2>Common Shortcut</label2>
         <defaultID>settings</defaultID>
-        <label>Settings</label>
-        <label2></label2>
-        <icon>DefaultAddonProgram.png</icon>
-        <thumb></thumb>
+        <icon>special://skin/extras/icons/settings.png</icon>
         <action>ActivateWindow(Settings)</action>
     </shortcut>
 </shortcuts>
@@ -694,7 +704,6 @@ echo "  - TMDb scrapers for movies and TV shows"
 echo "  - Global search addon"
 echo ""
 echo "Configured:"
-echo "  - Auto library scan on startup"
 echo "  - Full metadata + artwork + episode summaries"
 echo "  - Dolby Vision conversion enabled"
 echo "  - HDR-to-SDR tonemapping (ACES)"
